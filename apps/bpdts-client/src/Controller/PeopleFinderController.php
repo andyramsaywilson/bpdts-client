@@ -3,11 +3,12 @@ declare(strict_types = 1);
 
 namespace App\Controller;
 
+use App\Promise\PromiseCollection;
 use App\Entity\User;
 use App\EntityCollection\UserCollection;
 use App\Exception\DataBoundaryTransformationFailedException;
-use App\Exception\GeolocationCalculationFailedException;
 use App\Exception\RequiredLookupFailedException;
+use App\Exception\UnexpectedLogicException;
 use App\Exception\UpstreamApiException;
 use App\ResponseBuilder\PeopleFinderResponseBuilder;
 use App\Service\DeduplicationService;
@@ -19,29 +20,49 @@ class PeopleFinderController
     private DeduplicationService $duplicate;
     private PeopleFinderService $service;
     private PeopleFinderResponseBuilder $responseBuilder;
+    private PromiseCollection $promises;
 
-    public function getPeople(): Response
+    public function __construct(
+        DeduplicationService $duplicate,
+        PeopleFinderService $service,
+        PeopleFinderResponseBuilder $responseBuilder,
+        PromiseCollection $promises
+    ) {
+        $this->duplicate = $duplicate;
+        $this->service = $service;
+        $this->responseBuilder = $responseBuilder;
+        $this->promises = $promises;
+    }
+
+    public function getPeopleAsync(): Response
     {
         $city = 'London';
         $distance = 50;
 
         try {
-            $byCity = $this->service->findByCity($city);
+            $this->promises->add($byCity = $this->service->findByCity($city));
+            $this->promises->add($byLocation = $this->service->findByCurrentLocation($city, $distance));
+            while (!$this->promises->resolve()) {
+                usleep(10000);
+            }
         } catch (UpstreamApiException | DataBoundaryTransformationFailedException $e) {
             return $this->responseBuilder->buildBadGatewayResponse($e);
-        }
-
-        try {
-            $byLocation = $this->service->findByCurrentLocation($city, $distance);
-        } catch (UpstreamApiException | DataBoundaryTransformationFailedException $e) {
-            return $this->responseBuilder->buildBadGatewayResponse($e);
-        } catch (RequiredLookupFailedException | GeolocationCalculationFailedException $e) {
+        } catch (RequiredLookupFailedException | UnexpectedLogicException $e) {
             return $this->responseBuilder->buildInternalServerErrorResponse($e);
         }
 
-        $results = $this->combineResults($byCity, $byLocation);
+        $results = $this->combineResults(
+            $this->requireUserCollection($byCity->getParsedResponse()),
+            $this->requireUserCollection($byLocation->getParsedResponse())
+        );
         $response = $this->transformResults($results);
         return $this->responseBuilder->buildSuccessResponse($response);
+    }
+
+    private function requireUserCollection(object $object): UserCollection
+    {
+        /** @var UserCollection $object */
+        return $object;
     }
 
     private function combineResults(UserCollection $byCity, UserCollection $byLocation): UserCollection

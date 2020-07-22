@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace App\ApiClient\BpdtsTestApp;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ApiClient
 {
@@ -11,23 +12,20 @@ class ApiClient
     private string $usersByCityUrl;
     private string $usersUrl;
 
-    public function __construct(HttpClientInterface $httpClient, string $apiUrl)
+    public function __construct(HttpClientInterface $httpClient, string $bpdtsApiUrl)
     {
         $this->httpClient = $httpClient;
-        $apiUrl = 'https://bpdts-test-app.herokuapp.com/';
-        $this->usersByCityUrl = $apiUrl . 'city/' . '{city}' . '/users';
-        $this->usersUrl = $apiUrl;
+        $this->usersByCityUrl = $bpdtsApiUrl . 'city/' . '{city}' . '/users';
+        $this->usersUrl = $bpdtsApiUrl;
     }
 
-    public function findUsersByCity(string $city): string
+    public function findUsersByCity(string $city): ResponseInterface
     {
-        $response = $this->httpClient->request('get', str_replace('{city}', $city, $this->usersByCityUrl));
-        return $response->getContent();
+        return $this->httpClient->request('get', str_replace('{city}', $city, $this->usersByCityUrl));
     }
 
-    public function findUsers(): string
+    public function findUsers(): ResponseInterface
     {
-        $response = $this->httpClient->request('get', $this->usersUrl);
-        return $response->getContent();
+        return $this->httpClient->request('get', $this->usersUrl);
     }
 }

@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace App\ResponseBuilder;
 
-use App\EntityCollection\UserCollection;
 use Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
