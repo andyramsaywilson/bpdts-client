@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace App\Service;
 
-use App\ApiClient\Async\Promise;
+use App\Promise\Promise;
 use App\ApiClient\BpdtsTestApp\ApiClient;
 use App\DataBoundary\MapBpdtsTestAppResponseToUserCollection;
 use App\Entity\Geolocation;

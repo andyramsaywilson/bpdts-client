@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace App\Controller;
 
-use App\ApiClient\Async\PromiseCollection;
+use App\Promise\PromiseCollection;
 use App\Entity\User;
 use App\EntityCollection\UserCollection;
 use App\Exception\DataBoundaryTransformationFailedException;

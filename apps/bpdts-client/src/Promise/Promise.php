@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace App\ApiClient\Async;
+namespace App\Promise;
 
 use Exception;
 use Symfony\Contracts\HttpClient\ChunkInterface;
