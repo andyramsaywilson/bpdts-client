@@ -38,13 +38,11 @@ class PeopleFinderService
 
     public function findByCity(string $cityName): PromiseInterface
     {
-        $usersInCity = new UserCollection();
         $promise = $this->apiClient->findUsersByCity($cityName);
         return $promise->then(
-            function (ResponseInterface $response) use ($usersInCity) {
+            function (ResponseInterface $response) {
                 try {
-                    $this->apiDataMapper->map((string)$response->getBody(), $usersInCity);
-                    return $usersInCity;
+                    return $this->apiDataMapper->map((string)$response->getBody());
                 } catch (Exception $e) {
                     throw new DataBoundaryTransformationFailedException(
                         ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_MESSAGE,
@@ -79,8 +77,7 @@ class PeopleFinderService
         return $promise->then(
             function (ResponseInterface $response) use ($filter) {
                 try {
-                    $allUsers = new UserCollection();
-                    $this->apiDataMapper->map((string)$response->getBody(), $allUsers);
+                    $allUsers = $this->apiDataMapper->map((string)$response->getBody());
 
                     $usersWithinLocationBoundary = new UserCollection();
                     foreach ($allUsers->getItems() as $user) {
