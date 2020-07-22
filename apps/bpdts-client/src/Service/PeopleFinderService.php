@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace App\Service;
 
+use App\ApiClient\Async\Promise;
 use App\ApiClient\BpdtsTestApp\ApiClient;
 use App\DataBoundary\MapBpdtsTestAppResponseToUserCollection;
 use App\Entity\Geolocation;
@@ -35,45 +36,32 @@ class PeopleFinderService
         $this->geolocationService = $geolocationService;
     }
 
-    /**
-     * @param string $cityName
-     * @return UserCollection
-     * @throws DataBoundaryTransformationFailedException
-     * @throws UpstreamApiException
-     */
-    public function findByCity(string $cityName): UserCollection
+    public function findByCity(string $cityName): Promise
     {
-        try {
-            $responseContent = $this->apiClient->findUsersByCity($cityName);
-        } catch (Exception $e) {
-            throw new UpstreamApiException(
-                ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_MESSAGE,
-                ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_CODE,
-                $e
-            );
-        }
-
-        try {
-            return $this->apiDataMapper->map($responseContent);
-        } catch (Exception $e) {
-            throw new DataBoundaryTransformationFailedException(
-                ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_MESSAGE,
-                ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_CODE,
-                $e
-            );
-        }
+        return new Promise(
+            $this->apiClient->findUsersByCity($cityName),
+            new UserCollection(),
+            function(string $responseContent, UserCollection $usersInCity): void {
+                $this->apiDataMapper->map($responseContent, $usersInCity);
+            },
+            function (Exception $e): void {
+                throw new UpstreamApiException(
+                    ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_MESSAGE,
+                    ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_CODE,
+                    $e
+                );
+            },
+            function (Exception $e): void {
+                throw new DataBoundaryTransformationFailedException(
+                    ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_MESSAGE,
+                    ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_CODE,
+                    $e
+                );
+            }
+        );
     }
 
-    /**
-     * @param string $locationName
-     * @param float $maxAllowedDistanceInMiles
-     * @return UserCollection
-     * @throws DataBoundaryTransformationFailedException
-     * @throws RequiredLookupFailedException
-     * @throws UpstreamApiException
-     * @throws GeolocationCalculationFailedException
-     */
-    public function findByCurrentLocation(string $locationName, float $maxAllowedDistanceInMiles): UserCollection
+    public function findByCurrentLocation(string $locationName, float $maxAllowedDistanceInMiles): Promise
     {
         $targetLocation = $this->geolocationRepository->findByLocationName($locationName);
         if (!$targetLocation instanceof Geolocation) {
@@ -83,36 +71,36 @@ class PeopleFinderService
             );
         }
 
-        try {
-            $responseContent = $this->apiClient->findUsers();
-        } catch (Exception $e) {
-            throw new UpstreamApiException(
-                ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_MESSAGE,
-                ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_CODE,
-                $e
-            );
-        }
-
-        try {
-            $allUsers = $this->apiDataMapper->map($responseContent);
-        } catch (Exception $e) {
-            throw new DataBoundaryTransformationFailedException(
-                ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_MESSAGE,
-                ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_CODE,
-                $e
-            );
-        }
-
         $filter = $this->buildIsUserWithinLocationBoundaryFilter($maxAllowedDistanceInMiles, $targetLocation);
 
-        $usersWithinLocationBoundary = new UserCollection();
-        foreach ($allUsers->getItems() as $user) {
-            if ($filter($user)) {
-                $usersWithinLocationBoundary->addItem($user);
-            }
-        }
+        return new Promise(
+            $this->apiClient->findUsers(),
+            new UserCollection(),
+            function(string $responseContent, UserCollection $usersWithinLocationBoundary) use ($filter): void {
+                $allUsers = new UserCollection();
+                $this->apiDataMapper->map($responseContent, $allUsers);
 
-        return $usersWithinLocationBoundary;
+                foreach ($allUsers->getItems() as $user) {
+                    if ($filter($user)) {
+                        $usersWithinLocationBoundary->addItem($user);
+                    }
+                }
+            },
+            function (Exception $e): void {
+                throw new UpstreamApiException(
+                    ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_MESSAGE,
+                    ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_CODE,
+                    $e
+                );
+            },
+            function (Exception $e): void {
+                throw new DataBoundaryTransformationFailedException(
+                    ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_MESSAGE,
+                    ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_CODE,
+                    $e
+                );
+            }
+        );
     }
 
     private function buildIsUserWithinLocationBoundaryFilter(float $maxAllowedDistanceInMiles, Geolocation $targetLocation): callable
@@ -130,7 +118,8 @@ class PeopleFinderService
             } catch (Exception $e) {
                 throw new GeolocationCalculationFailedException(
                     ErrorCodes::APPLY_USER_WITHIN_LOCATION_BOUNDARY_FILTER_MESSAGE,
-                    ErrorCodes::APPLY_USER_WITHIN_LOCATION_BOUNDARY_FILTER_CODE
+                    ErrorCodes::APPLY_USER_WITHIN_LOCATION_BOUNDARY_FILTER_CODE,
+                    $e
                 );
             }
         };

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace App\ApiClient\BpdtsTestApp;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ApiClient
 {
@@ -19,15 +20,13 @@ class ApiClient
         $this->usersUrl = $apiUrl;
     }
 
-    public function findUsersByCity(string $city): string
+    public function findUsersByCity(string $city): ResponseInterface
     {
-        $response = $this->httpClient->request('get', str_replace('{city}', $city, $this->usersByCityUrl));
-        return $response->getContent();
+        return $this->httpClient->request('get', str_replace('{city}', $city, $this->usersByCityUrl));
     }
 
-    public function findUsers(): string
+    public function findUsers(): ResponseInterface
     {
-        $response = $this->httpClient->request('get', $this->usersUrl);
-        return $response->getContent();
+        return $this->httpClient->request('get', $this->usersUrl);
     }
 }
