@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace App\Service;
 
-use App\Promise\Promise;
 use App\ApiClient\BpdtsTestApp\ApiClient;
 use App\DataBoundary\MapBpdtsTestAppResponseToUserCollection;
 use App\Entity\Geolocation;
@@ -14,7 +13,9 @@ use App\Exception\ErrorCodes;
 use App\Exception\RequiredLookupFailedException;
 use App\Exception\UpstreamApiException;
 use App\Repository\GeolocationRepository;
+use GuzzleHttp\Promise\PromiseInterface;
 use Exception;
+use Psr\Http\Message\ResponseInterface;
 
 class PeopleFinderService
 {
@@ -35,32 +36,34 @@ class PeopleFinderService
         $this->geolocationService = $geolocationService;
     }
 
-    public function findByCity(string $cityName): Promise
+    public function findByCity(string $cityName): PromiseInterface
     {
-        return new Promise(
-            $this->apiClient->findUsersByCity($cityName),
-            new UserCollection(),
-            function(string $responseContent, UserCollection $usersInCity): void {
-                $this->apiDataMapper->map($responseContent, $usersInCity);
+        $usersInCity = new UserCollection();
+        $promise = $this->apiClient->findUsersByCity($cityName);
+        return $promise->then(
+            function (ResponseInterface $response) use ($usersInCity) {
+                try {
+                    $this->apiDataMapper->map((string)$response->getBody(), $usersInCity);
+                    return $usersInCity;
+                } catch (Exception $e) {
+                    throw new DataBoundaryTransformationFailedException(
+                        ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_MESSAGE,
+                        ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_CODE,
+                        $e
+                    );
+                }
             },
-            function (Exception $e): void {
+            function (Exception $e) {
                 throw new UpstreamApiException(
                     ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_MESSAGE,
                     ErrorCodes::BPDTS_FIND_USERS_BY_CITY_API_CALL_FAILED_CODE,
-                    $e
-                );
-            },
-            function (Exception $e): void {
-                throw new DataBoundaryTransformationFailedException(
-                    ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_MESSAGE,
-                    ErrorCodes::FIND_BY_CITY_TRANSFORMATION_FAILED_CODE,
                     $e
                 );
             }
         );
     }
 
-    public function findByCurrentLocation(string $locationName, float $maxAllowedDistanceInMiles): Promise
+    public function findByCurrentLocation(string $locationName, float $maxAllowedDistanceInMiles): PromiseInterface
     {
         $targetLocation = $this->geolocationRepository->findByLocationName($locationName);
         if (!$targetLocation instanceof Geolocation) {
@@ -72,30 +75,32 @@ class PeopleFinderService
 
         $filter = $this->buildIsUserWithinLocationBoundaryFilter($maxAllowedDistanceInMiles, $targetLocation);
 
-        return new Promise(
-            $this->apiClient->findUsers(),
-            new UserCollection(),
-            function(string $responseContent, UserCollection $usersWithinLocationBoundary) use ($filter): void {
-                $allUsers = new UserCollection();
-                $this->apiDataMapper->map($responseContent, $allUsers);
+        $promise = $this->apiClient->findUsers();
+        return $promise->then(
+            function (ResponseInterface $response) use ($filter) {
+                try {
+                    $allUsers = new UserCollection();
+                    $this->apiDataMapper->map((string)$response->getBody(), $allUsers);
 
-                foreach ($allUsers->getItems() as $user) {
-                    if ($filter($user)) {
-                        $usersWithinLocationBoundary->addItem($user);
+                    $usersWithinLocationBoundary = new UserCollection();
+                    foreach ($allUsers->getItems() as $user) {
+                        if ($filter($user)) {
+                            $usersWithinLocationBoundary->addItem($user);
+                        }
                     }
+                    return $usersWithinLocationBoundary;
+                } catch (Exception $e) {
+                    throw new DataBoundaryTransformationFailedException(
+                        ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_MESSAGE,
+                        ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_CODE,
+                        $e
+                    );
                 }
             },
-            function (Exception $e): void {
+            function (Exception $e) {
                 throw new UpstreamApiException(
                     ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_MESSAGE,
                     ErrorCodes::BPDTS_FIND_USERS_API_CALL_FAILED_CODE,
-                    $e
-                );
-            },
-            function (Exception $e): void {
-                throw new DataBoundaryTransformationFailedException(
-                    ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_MESSAGE,
-                    ErrorCodes::FIND_BY_CURRENT_LOCATION_TRANSFORMATION_FAILED_CODE,
                     $e
                 );
             }

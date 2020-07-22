@@ -10,6 +10,19 @@ class MapBpdtsTestAppResponseToUserCollection
 {
     public function map(string $jsonResponse, UserCollection $destination): void
     {
-        $destination->addItem(new User($jsonResponse));
+        $users = json_decode($jsonResponse, true);
+        foreach ($users as $user) {
+            $destination->addItem(
+                new User(
+                    (int)$user['id'],
+                    $user['first_name'],
+                    $user['last_name'],
+                    $user['email'],
+                    $user['ip_address'],
+                    (float)$user['latitude'],
+                    (float)$user['longitude']
+                )
+            );
+        }
     }
 }

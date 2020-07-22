@@ -3,29 +3,29 @@ declare(strict_types = 1);
 
 namespace App\ApiClient\BpdtsTestApp;
 
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
+use GuzzleHttp\Client;
+use GuzzleHttp\Promise\PromiseInterface;
 
 class ApiClient
 {
-    private HttpClientInterface $httpClient;
+    private Client $httpClient;
     private string $usersByCityUrl;
     private string $usersUrl;
 
-    public function __construct(HttpClientInterface $httpClient, string $bpdtsApiUrl)
+    public function __construct(string $bpdtsApiUrl)
     {
-        $this->httpClient = $httpClient;
+        $this->httpClient = new Client(['base_uri' => $bpdtsApiUrl]);
         $this->usersByCityUrl = $bpdtsApiUrl . 'city/' . '{city}' . '/users';
-        $this->usersUrl = $bpdtsApiUrl;
+        $this->usersUrl = $bpdtsApiUrl . '/users';
     }
 
-    public function findUsersByCity(string $city): ResponseInterface
+    public function findUsersByCity(string $city): PromiseInterface
     {
-        return $this->httpClient->request('get', str_replace('{city}', $city, $this->usersByCityUrl));
+        return $this->httpClient->getAsync(str_replace('{city}', $city, $this->usersByCityUrl));
     }
 
-    public function findUsers(): ResponseInterface
+    public function findUsers(): PromiseInterface
     {
-        return $this->httpClient->request('get', $this->usersUrl);
+        return $this->httpClient->getAsync($this->usersUrl);
     }
 }

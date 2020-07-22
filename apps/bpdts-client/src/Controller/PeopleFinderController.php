@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace App\Controller;
 
-use App\Promise\PromiseCollection;
 use App\Entity\User;
 use App\EntityCollection\UserCollection;
 use App\Exception\DataBoundaryTransformationFailedException;
@@ -20,56 +19,46 @@ class PeopleFinderController
     private DeduplicationService $duplicate;
     private PeopleFinderService $service;
     private PeopleFinderResponseBuilder $responseBuilder;
-    private PromiseCollection $promises;
 
     public function __construct(
         DeduplicationService $duplicate,
         PeopleFinderService $service,
-        PeopleFinderResponseBuilder $responseBuilder,
-        PromiseCollection $promises
+        PeopleFinderResponseBuilder $responseBuilder
     ) {
         $this->duplicate = $duplicate;
         $this->service = $service;
         $this->responseBuilder = $responseBuilder;
-        $this->promises = $promises;
     }
 
-    public function getPeopleAsync(): Response
+    public function getPeople(): Response
     {
         $city = 'London';
         $distance = 50;
 
+        $promises = [
+            'byCity' => $this->service->findByCity($city),
+            'byLocation' => $this->service->findByCurrentLocation($city, $distance),
+        ];
         try {
-            $this->promises->add($byCity = $this->service->findByCity($city));
-            $this->promises->add($byLocation = $this->service->findByCurrentLocation($city, $distance));
-            while (!$this->promises->resolve()) {
-                usleep(10000);
-            }
-        } catch (UpstreamApiException | DataBoundaryTransformationFailedException $e) {
+            $responses = \GuzzleHttp\Promise\unwrap($promises);
+        }  catch (UpstreamApiException | DataBoundaryTransformationFailedException $e) {
             return $this->responseBuilder->buildBadGatewayResponse($e);
         } catch (RequiredLookupFailedException | UnexpectedLogicException $e) {
             return $this->responseBuilder->buildInternalServerErrorResponse($e);
         }
 
-        $results = $this->combineResults(
-            $this->requireUserCollection($byCity->getParsedResponse()),
-            $this->requireUserCollection($byLocation->getParsedResponse())
-        );
+        $results = $this->combineResults($responses);
         $response = $this->transformResults($results);
         return $this->responseBuilder->buildSuccessResponse($response);
     }
 
-    private function requireUserCollection(object $object): UserCollection
-    {
-        /** @var UserCollection $object */
-        return $object;
-    }
-
-    private function combineResults(UserCollection $byCity, UserCollection $byLocation): UserCollection
+    private function combineResults(array $userCollections): UserCollection
     {
         $results = new UserCollection();
         $this->duplicate->deduplicate(
-            [$byCity->getItems(), $byLocation->getItems()],
+            array_map(function(UserCollection $value): array {
+                return $value->getItems();
+            }, $userCollections),
             function (User $user): int {
                 return $user->getId();
             },
