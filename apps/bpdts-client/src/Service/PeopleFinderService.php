@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\EntityCollection\UserCollection;
 use App\Exception\DataBoundaryTransformationFailedException;
 use App\Exception\ErrorCodes;
-use App\Exception\GeolocationCalculationFailedException;
 use App\Exception\RequiredLookupFailedException;
 use App\Exception\UpstreamApiException;
 use App\Repository\GeolocationRepository;
@@ -105,23 +104,14 @@ class PeopleFinderService
 
     private function buildIsUserWithinLocationBoundaryFilter(float $maxAllowedDistanceInMiles, Geolocation $targetLocation): callable
     {
-        return function(User $subject) use ($maxAllowedDistanceInMiles, $targetLocation): bool {
-            try {
-                $actualDistance = $this->geolocationService->findDistanceBetweenTwoPointsInMiles(
-                    $targetLocation->getLatitude(),
-                    $targetLocation->getLongitude(),
-                    $subject->getLatitude(),
-                    $subject->getLongitude()
-                );
-
-                return $actualDistance <= $maxAllowedDistanceInMiles;
-            } catch (Exception $e) {
-                throw new GeolocationCalculationFailedException(
-                    ErrorCodes::APPLY_USER_WITHIN_LOCATION_BOUNDARY_FILTER_MESSAGE,
-                    ErrorCodes::APPLY_USER_WITHIN_LOCATION_BOUNDARY_FILTER_CODE,
-                    $e
-                );
-            }
+        return function (User $subject) use ($maxAllowedDistanceInMiles, $targetLocation): bool {
+            return $this->geolocationService->isPointWithinDistance(
+                $targetLocation->getLatitude(),
+                $targetLocation->getLongitude(),
+                $subject->getLatitude(),
+                $subject->getLongitude(),
+                $maxAllowedDistanceInMiles
+            );
         };
     }
 }

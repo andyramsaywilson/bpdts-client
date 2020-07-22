@@ -12,12 +12,11 @@ class ApiClient
     private string $usersByCityUrl;
     private string $usersUrl;
 
-    public function __construct(HttpClientInterface $httpClient, string $apiUrl)
+    public function __construct(HttpClientInterface $httpClient, string $bpdtsApiUrl)
     {
         $this->httpClient = $httpClient;
-        $apiUrl = 'https://bpdts-test-app.herokuapp.com/';
-        $this->usersByCityUrl = $apiUrl . 'city/' . '{city}' . '/users';
-        $this->usersUrl = $apiUrl;
+        $this->usersByCityUrl = $bpdtsApiUrl . 'city/' . '{city}' . '/users';
+        $this->usersUrl = $bpdtsApiUrl;
     }
 
     public function findUsersByCity(string $city): ResponseInterface

@@ -7,7 +7,6 @@ use App\ApiClient\Async\PromiseCollection;
 use App\Entity\User;
 use App\EntityCollection\UserCollection;
 use App\Exception\DataBoundaryTransformationFailedException;
-use App\Exception\GeolocationCalculationFailedException;
 use App\Exception\RequiredLookupFailedException;
 use App\Exception\UnexpectedLogicException;
 use App\Exception\UpstreamApiException;
@@ -48,7 +47,7 @@ class PeopleFinderController
             }
         } catch (UpstreamApiException | DataBoundaryTransformationFailedException $e) {
             return $this->responseBuilder->buildBadGatewayResponse($e);
-        } catch (RequiredLookupFailedException | GeolocationCalculationFailedException | UnexpectedLogicException $e) {
+        } catch (RequiredLookupFailedException | UnexpectedLogicException $e) {
             return $this->responseBuilder->buildInternalServerErrorResponse($e);
         }
 

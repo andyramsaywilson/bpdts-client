@@ -11,9 +11,9 @@ class Promise
 {
     private ResponseInterface $httpResponse;
     private object $parsedResponse;
-    private Callable $onSuccessHandler;
-    private Callable $onApiErrorHandler;
-    private Callable $onApiResponseParseErrorHandler;
+    private $onSuccessHandler;
+    private $onApiErrorHandler;
+    private $onApiResponseParseErrorHandler;
     private bool $handled = false;
 
     public function __construct(
