@@ -8,6 +8,6 @@ rebuild:
 
 test: test-mocked test-live
 test-mocked:
-	docker exec -it -u root technicaltest_php_1 ./vendor/bin/simple-phpunit -c ./phpunit.xml.dist --exclude-group="realApi"
+	docker exec -it -u root bpdts-application ./vendor/bin/simple-phpunit -c ./phpunit.xml.dist --exclude-group="realApi"
 test-live:
-	docker exec -it -u root technicaltest_php_1 ./vendor/bin/simple-phpunit -c ./phpunit.xml.dist --exclude-group="default"
+	docker exec -it -u root bpdts-application ./vendor/bin/simple-phpunit -c ./phpunit.xml.dist --exclude-group="default"
