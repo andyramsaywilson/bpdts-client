@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   nginx:
+    container_name: bpdts-gateway
     image: nginx:1.19.0-alpine
     restart: on-failure
     volumes:
@@ -12,6 +13,7 @@ services:
     depends_on:
       - php
   php:
+    container_name: bpdts-application
     build:
       context: .
       dockerfile: docker/php/Dockerfile
