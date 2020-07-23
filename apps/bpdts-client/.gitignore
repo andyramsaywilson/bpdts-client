@@ -13,3 +13,11 @@
 .phpunit.result.cache
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
+
+### MAC OS ###
+.DS_STORE
+### MAC OS file ###
+
+### IDE ###
+.idea/
+### IDE ###
