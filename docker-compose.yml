@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:1.19.0-alpine
+    restart: on-failure
+    volumes:
+      - './apps/bpdts-client/:/usr/src/app'
+      - './docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro'
+    ports:
+      - '${LOCAL_PORT}:80'
+    depends_on:
+      - php
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - './apps/bpdts-client/:/usr/src/app'
+    restart: on-failure
+    env_file:
+      - .env
+    user: '${LOCAL_USER_ID}:${LOCAL_GROUP_ID}'
