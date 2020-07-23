@@ -95,6 +95,17 @@ class MapBpdtsTestAppResponseToUserCollectionTest extends TestCase
         ]));
     }
 
+    /** @dataProvider providerGeolocationParsingWorksAroundDifferingResponseDataTypes */
+    public function testGeolocationParsingWorksAroundDifferingResponseDataTypes($field, $getterName, $requestValue, float $expected): void
+    {
+        $user = $this->getJsonResponseItem(1);
+        $user[$field] = $requestValue;
+        $actual = $this->sut->map(json_encode([
+            $user,
+        ]))->getItems()[0];
+        $this->assertSame($expected, $actual->$getterName());
+    }
+
     public function providerMissingResponseFieldDataIsRejected(): array
     {
         return array_map(function($value) {
@@ -112,6 +123,24 @@ class MapBpdtsTestAppResponseToUserCollectionTest extends TestCase
             ['ip_address', 1893456],
             ['latitude', 'abcdefg'],
             ['longitude', 'gfedbca'],
+        ];
+    }
+
+    public function providerGeolocationParsingWorksAroundDifferingResponseDataTypes(): array
+    {
+        return [
+            ['latitude', 'getLatitude', 123, 123.0],
+            ['longitude', 'getLongitude', 123, 123.0],
+            ['latitude', 'getLatitude', '123.34', 123.34],
+            ['longitude', 'getLongitude', '123.34', 123.34],
+            ['latitude', 'getLatitude', 123.345, 123.345],
+            ['longitude', 'getLongitude', 123.345, 123.345],
+            ['latitude', 'getLatitude', -123, -123.0],
+            ['longitude', 'getLongitude', -123, -123.0],
+            ['latitude', 'getLatitude', '-123.34', -123.34],
+            ['longitude', 'getLongitude', '-123.34', -123.34],
+            ['latitude', 'getLatitude', -123.345, -123.345],
+            ['longitude', 'getLongitude', -123.345, -123.345],
         ];
     }
 

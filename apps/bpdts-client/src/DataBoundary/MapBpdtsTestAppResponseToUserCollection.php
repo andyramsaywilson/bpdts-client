@@ -32,7 +32,7 @@ class MapBpdtsTestAppResponseToUserCollection
             return is_int($value);
         };
         $this->validators['float'] = function ($value) {
-            return is_float($value) || is_int($value);
+            return is_float($value) || is_int($value) || is_numeric($value);
         };
         $this->validators['string'] = function ($value) {
             return is_string($value);
@@ -55,13 +55,13 @@ class MapBpdtsTestAppResponseToUserCollection
             $this->guardAgainstInvalidFields($user);
             $result->addItem(
                 new User(
-                    $user['id'],
-                    $user['first_name'],
-                    $user['last_name'],
-                    $user['email'],
-                    $user['ip_address'],
-                    $user['latitude'],
-                    $user['longitude']
+                    (int)$user['id'],
+                    (string)$user['first_name'],
+                    (string)$user['last_name'],
+                    (string)$user['email'],
+                    (string)$user['ip_address'],
+                    (float)$user['latitude'],
+                    (float)$user['longitude']
                 )
             );
         }
