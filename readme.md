@@ -4,14 +4,17 @@ Rest API client for bpdts-test-app.herokuapp.com
 # Getting started
 ## System Requirements
 * To run the application locally you'll need docker
-* If you have make you can use the build commands https://www.gnu.org/software/make/manual/make.html
+* To create the dependencies you need to have composer installed locally https://getcomposer.org/doc/00-intro.md
+* If you have `make` you can use the build commands https://www.gnu.org/software/make/manual/make.html
 
 * Assuming you have the prequisites, you should be able to run it using the following commands
 ```
-git checkout https://github.com/andyramsaywilson/bpdts-client.git
-cd bpdts-client
+git clone https://github.com/andyramsaywilson/bpdts-client.git
+cd bpdts-client/apps/bpdts-client
+composer install
+cd ../../
 make up
-make test
+make test # this is slow first time as it has to install the dependencies for unit testing
 wget http://localhost:8080/people
 make down
 ```
@@ -60,7 +63,9 @@ Consider the testing pyramid https://martinfowler.com/bliki/TestPyramid.html
 
 # Notes
 ## Time-limited
-* This was a time-limited excercise, I ran out of time before adding the Mock API server testing steps.
+* This was a time-limited excercise, I ran out of time before adding many improvements, including
+* The intial checkout process (including having to have composer installed locally instead of running inside the container).
+* I would have add the Mock API server testing steps.
 * I would have added more unit tests
 * I would have made the functional tests have more assertions, for example asserting that the response payload fields exactly match the expectation based on the response.
 * I would have added some performance tests, to prove that the upstream requests are made asynchronously.
